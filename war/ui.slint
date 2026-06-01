@@ -1,0 +1,175 @@
+import { Button, VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
+
+export struct CellData {
+    row: int,
+    col: int,
+    label: string,
+    color: color,
+    selected: bool,
+}
+
+component CellTile inherits Rectangle {
+    in property <CellData> data;
+    callback tile_clicked();
+    callback tile_right_clicked();
+
+    width: 110px;
+    height: 100px;
+    background: data.color;
+    border-width: data.selected ? 3px : 1px;
+    border-color: data.selected ? #5de6ff : #273647;
+    border-radius: 8px;
+
+    Text {
+        text: data.label;
+        color: #ffffff;
+        font-size: 16px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                if (event.button == PointerEventButton.right) {
+                    tile_right_clicked();
+                } else if (event.button == PointerEventButton.left) {
+                    tile_clicked();
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    in property <[CellData]> cells;
+    in property <[string]> order_model;
+    in-out property <string> status_text;
+    in-out property <string> round_text;
+    in-out property <string> current_text;
+    in-out property <bool> attack_active;
+    in-out property <int> attack_from_row;
+    in-out property <int> attack_from_col;
+    in-out property <int> attack_to_row;
+    in-out property <int> attack_to_col;
+    in-out property <float> attack_progress;
+    in-out property <bool> upgrade_visible;
+    in-out property <string> upgrade_text;
+
+    callback cell_clicked(int);
+    callback cell_right_clicked(int);
+    callback end_turn_clicked();
+    callback upgrade_barracks();
+    callback upgrade_factory();
+    callback close_upgrade();
+
+    width: 980px;
+    height: 620px;
+    title: "Guerra de Territórios";
+    background: #051424;
+
+    HorizontalBox {
+        spacing: 16px;
+        padding: 16px;
+
+        Rectangle {
+            width: 620px;
+            height: 560px;
+            border-width: 1px;
+            border-color: #45464d;
+            background: #0d1c2d;
+            GridLayout {
+                padding: 12px;
+                spacing: 6px;
+                for cell[i] in cells : CellTile {
+                    row: cell.row;
+                    col: cell.col;
+                    data: cell;
+                    tile_clicked => { cell_clicked(i); }
+                    tile_right_clicked => { cell_right_clicked(i); }
+                }
+            }
+
+            Rectangle {
+                visible: attack_active;
+                width: 16px;
+                height: 16px;
+                background: #5de6ff;
+                border-width: 1px;
+                border-color: #051424;
+                x: 12px + (attack_from_col + (attack_to_col - attack_from_col) * attack_progress) * (110px + 6px) + 55px - 8px;
+                y: 12px + (attack_from_row + (attack_to_row - attack_from_row) * attack_progress) * (100px + 6px) + 50px - 8px;
+                border-radius: 8px;
+                animate x { duration: 900ms; easing: ease-in-out; }
+                animate y { duration: 900ms; easing: ease-in-out; }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            width: 300px;
+
+            Rectangle {
+                background: #122131;
+                border-width: 1px;
+                border-color: #45464d;
+                padding: 12px;
+                VerticalBox {
+                    spacing: 6px;
+                    Text { text: "GUERRA DE TERRITÓRIOS"; font-size: 18px; color: #bec6e0; }
+                    Text { text: round_text; font-size: 18px; color: #d4e4fa; }
+                    Text { text: current_text; font-size: 16px; color: #c6c6cd; }
+                    Text { text: status_text; wrap: word-wrap; color: #c6c6cd; }
+                }
+            }
+
+            Rectangle {
+                background: #122131;
+                border-width: 1px;
+                border-color: #45464d;
+                padding: 12px;
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "ORDEM (RADIX SORT)"; color: #bec6e0; font-size: 14px; }
+                    ListView {
+                        height: 220px;
+                        for item in order_model : Text {
+                            text: item;
+                            color: #d4e4fa;
+                        }
+                    }
+                }
+            }
+
+            Button {
+                text: "Finalizar turno";
+                clicked => { end_turn_clicked(); }
+            }
+
+            Rectangle {
+                visible: upgrade_visible;
+                background: #122131;
+                border-width: 1px;
+                border-color: #45464d;
+                padding: 12px;
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "MELHORIAS DA PROVÍNCIA"; color: #bec6e0; font-size: 14px; }
+                    Text { text: upgrade_text; wrap: word-wrap; color: #c6c6cd; }
+                    Button {
+                        text: "Construir quartel (300)";
+                        clicked => { upgrade_barracks(); }
+                    }
+                    Button {
+                        text: "Construir fábrica (300)";
+                        clicked => { upgrade_factory(); }
+                    }
+                    Button {
+                        text: "Fechar";
+                        clicked => { close_upgrade(); }
+                    }
+                }
+            }
+        }
+    }
+}
